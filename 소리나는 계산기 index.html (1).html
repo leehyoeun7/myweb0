@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>소리나는 계산기</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #ffeef5 0%, #fff6e5 50%, #e8f5e9 100%);
+      --calc-bg: rgba(255, 255, 255, 0.92);
+      --primary-color: #ff85a2;
+      --primary-hover: #ff6f91;
+      --num-btn-bg: #fff9d6;
+      --num-btn-hover: #fef08a;
+      --num-btn-border: #f0e4a8;
+      --op-btn-bg: #ffedd5;
+      --op-btn-hover: #fed7aa;
+      --op-btn-text: #ea580c;
+      --special-btn-bg: #e0f2fe;
+      --special-btn-hover: #bae6fd;
+      --special-btn-text: #0284c7;
+      --text-main: #333333;
+      --shadow-soft: 0 12px 30px rgba(255, 133, 162, 0.2);
+      --btn-shadow: 0 4px 0px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg-gradient);
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* 토끼 장식 및 구름 배경 요소 */
+    .bg-decor {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .cloud-1 { top: 8%; left: 6%; opacity: 0.65; }
+    .cloud-2 { bottom: 12%; right: 6%; opacity: 0.65; }
+    .carrot-1 { bottom: 20%; left: 8%; transform: rotate(-25deg); opacity: 0.7; }
+    .carrot-2 { top: 18%; right: 10%; transform: rotate(20deg); opacity: 0.7; }
+
+    /* 계산기 컨테이너 */
+    .calculator-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 380px;
+      background: var(--calc-bg);
+      backdrop-filter: blur(12px);
+      border: 3px solid #ffccd5;
+      border-radius: 36px;
+      padding: 24px 20px 20px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 귀여운 토끼 헤더 */
+    .bunny-header {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: -10px;
+    }
+
+    .bunny-face-container {
+      position: relative;
+      width: 80px;
+      height: 70px;
+    }
+
+    .app-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #ff6088;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 화면 디스플레이 */
+    .display-screen {
+      background: #fdf2f4;
+      border-radius: 20px;
+      border: 2px solid #ffd1dc;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 95px;
+      text-align: right;
+      overflow: hidden;
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    .history-text {
+      font-size: 0.95rem;
+      color: #a0727d;
+      min-height: 22px;
+      white-space: nowrap;
+      overflow-x: auto;
+      margin-bottom: 4px;
+    }
+
+    .current-text {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow-x: auto;
+      line-height: 1.1;
+    }
+
+    /* 키패드 그리드 */
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    button.btn {
+      aspect-ratio: 1 / 0.95;
+      border: none;
+      border-radius: 18px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: all 0.08s ease;
+      background: var(--num-btn-bg);
+      color: var(--text-main);
+      box-shadow: var(--btn-shadow);
+      border-bottom: 3px solid var(--num-btn-border);
+    }
+
+    button.btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+    }
+
+    /* 버튼 스타일 분류 */
+    button.btn-op {
+      background: var(--op-btn-bg);
+      color: var(--op-btn-text);
+      border-bottom: 3px solid #fed7aa;
+      font-size: 1.5rem;
+    }
+
+    button.btn-special {
+      background: var(--special-btn-bg);
+      color: var(--special-btn-text);
+      border-bottom: 3px solid #bae6fd;
+      font-size: 1.25rem;
+    }
+
+    button.btn-equal {
+      background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+      color: #ffffff;
+      border-bottom: 3px solid #e05370;
+      font-size: 1.7rem;
+    }
+
+    button.btn-zero {
+      grid-column: span 2;
+      aspect-ratio: auto;
+      height: 100%;
+    }
+
+    /* 볼륨/사운드 토글 안내 */
+    .sound-badge {
+      align-self: center;
+      font-size: 0.78rem;
+      color: #ff85a2;
+      background: #fff0f3;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    /* 모바일 맞춤 세로 반응형 */
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+      .calculator-card {
+        padding: 16px 14px 14px;
+        border-radius: 28px;
+        max-width: 100%;
+        height: 94vh;
+        max-height: 720px;
+        justify-content: space-between;
+      }
+      .current-text {
+        font-size: 2rem;
+      }
+      .keypad-grid {
+        gap: 10px;
+      }
+      button.btn {
+        border-radius: 16px;
+        font-size: 1.35rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 배경 SVG 장식 (구름 및 당근) -->
+  <svg class="bg-decor cloud-1" width="100" height="60" viewBox="0 0 100 60" fill="#ffffff">
+    <path d="M 20 45 A 15 15 0 0 1 35 25 A 20 20 0 0 1 70 25 A 15 15 0 0 1 85 45 Z" />
+  </svg>
+  <svg class="bg-decor cloud-2" width="120" height="70" viewBox="0 0 100 60" fill="#ffffff">
+    <path d="M 20 45 A 15 15 0 0 1 35 25 A 20 20 0 0 1 70 25 A 15 15 0 0 1 85 45 Z" />
+  </svg>
+  <svg class="bg-decor carrot-1" width="45" height="45" viewBox="0 0 32 32">
+    <path d="M22 6 L26 2 M22 6 L28 6 M22 6 L25 10" stroke="#48bb78" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M22 6 L6 22 A 5 5 0 0 0 10 26 L26 10 Z" fill="#f97316"/>
+  </svg>
+  <svg class="bg-decor carrot-2" width="40" height="40" viewBox="0 0 32 32">
+    <path d="M22 6 L26 2 M22 6 L28 6 M22 6 L25 10" stroke="#48bb78" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M22 6 L6 22 A 5 5 0 0 0 10 26 L26 10 Z" fill="#f97316"/>
+  </svg>
+
+  <main class="calculator-card">
+    <!-- 토끼 캐릭터 헤더 -->
+    <header class="bunny-header">
+      <div class="bunny-face-container">
+        <!-- SVG 귀여운 토끼 얼굴 -->
+        <svg viewBox="0 0 100 90" width="80" height="72">
+          <!-- 귀 -->
+          <ellipse cx="32" cy="24" rx="9" ry="22" fill="#ffffff" stroke="#ffccd5" stroke-width="2.5"/>
+          <ellipse cx="32" cy="24" rx="5" ry="14" fill="#ffb6c1"/>
+          <ellipse cx="68" cy="24" rx="9" ry="22" fill="#ffffff" stroke="#ffccd5" stroke-width="2.5"/>
+          <ellipse cx="68" cy="24" rx="5" ry="14" fill="#ffb6c1"/>
+          <!-- 얼굴 -->
+          <ellipse cx="50" cy="56" rx="36" ry="30" fill="#ffffff" stroke="#ffccd5" stroke-width="2.5"/>
+          <!-- 볼터치 -->
+          <circle cx="28" cy="62" r="5" fill="#ffccd5" opacity="0.8"/>
+          <circle cx="72" cy="62" r="5" fill="#ffccd5" opacity="0.8"/>
+          <!-- 눈 -->
+          <ellipse cx="38" cy="52" rx="3.5" ry="4.5" fill="#333333"/>
+          <circle cx="39.5" cy="50.5" r="1.3" fill="#ffffff"/>
+          <ellipse cx="62" cy="52" rx="3.5" ry="4.5" fill="#333333"/>
+          <circle cx="63.5" cy="50.5" r="1.3" fill="#ffffff"/>
+          <!-- 코와 입 -->
+          <polygon points="50,60 47,57 53,57" fill="#ff8da1"/>
+          <path d="M 46 63 Q 50 66 50 60 Q 50 66 54 63" fill="none" stroke="#333333" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1 class="app-title">🐰 소리나는 계산기</h1>
+      <span class="sound-badge">🔔 버튼 누를 때마다 뿅뿅 소리가 나요!</span>
+    </header>
+
+    <!-- 숫자 및 연산식 표시 화면 -->
+    <section class="display-screen" aria-label="계산기 화면">
+      <div id="historyDisplay" class="history-text"></div>
+      <div id="currentDisplay" class="current-text">0</div>
+    </section>
+
+    <!-- 키패드 영역 -->
+    <section class="keypad-grid">
+      <button class="btn btn-special" data-action="clear">C</button>
+      <button class="btn btn-special" data-action="backspace">⌫</button>
+      <button class="btn btn-special" data-action="percent">%</button>
+      <button class="btn btn-op" data-operator="÷">÷</button>
+
+      <button class="btn" data-number="7">7</button>
+      <button class="btn" data-number="8">8</button>
+      <button class="btn" data-number="9">9</button>
+      <button class="btn btn-op" data-operator="×">×</button>
+
+      <button class="btn" data-number="4">4</button>
+      <button class="btn" data-number="5">5</button>
+      <button class="btn" data-number="6">6</button>
+      <button class="btn btn-op" data-operator="-">-</button>
+
+      <button class="btn" data-number="1">1</button>
+      <button class="btn" data-number="2">2</button>
+      <button class="btn" data-number="3">3</button>
+      <button class="btn btn-op" data-operator="+">+</button>
+
+      <button class="btn btn-zero" data-number="0">0</button>
+      <button class="btn" data-action="decimal">.</button>
+      <button class="btn btn-equal" data-action="calculate">=</button>
+    </section>
+  </main>
+
+  <script>
+    /* =========================================
+       1. Web Audio API 기반 효과음 사운드 엔진
+       ========================================= */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        // 각 숫자별 도레미파솔라시도 음계 주파수 매핑
+        this.noteMap = {
+          '0': 261.63, // 도 (C4)
+          '1': 293.66, // 레 (D4)
+          '2': 329.63, // 미 (E4)
+          '3': 349.23, // 파 (F4)
+          '4': 392.00, // 솔 (G4)
+          '5': 440.00, // 라 (A4)
+          '6': 493.88, // 시 (B4)
+          '7': 523.25, // 높은 도 (C5)
+          '8': 587.33, // 높은 레 (D5)
+          '9': 659.25, // 높은 미 (E5)
+          '.': 783.99  // 높은 솔 (G5)
+        };
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      // 숫자 버튼 소리 (맑은 마림바/방울 소리)
+      playNumberSound(key) {
+        this.init();
+        if (!this.ctx) return;
+
+        const freq = this.noteMap[key] || 440;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.22);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.22);
+      }
+
+      // 연산자 소리 (톡톡 튀는 소리)
+      playOperatorSound() {
+        this.init();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(550, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.12);
+
+        gain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      // 등호 (=) 계산 완료 소리 (기분 좋은 2화음 팡파르)
+      playEqualSound() {
+        this.init();
+        if (!this.ctx) return;
+
+        [523.25, 659.25, 783.99].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          const startTime = this.ctx.currentTime + (idx * 0.06);
+          osc.frequency.setValueAtTime(f, startTime);
+
+          gain.gain.setValueAtTime(0.18, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(startTime);
+          osc.stop(startTime + 0.25);
+        });
+      }
+
+      // 초기화 및 지우기 소리
+      playClearSound() {
+        this.init();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.15);
+
+        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+    }
+
+    /* =========================================
+       2. 부동소수점 오차 없는 정밀 계산 로직
+       ========================================= */
+    class Calculator {
+      constructor(historyElem, currentElem, soundEngine) {
+        this.historyElem = historyElem;
+        this.currentElem = currentElem;
+        this.sound = soundEngine;
+        this.clearAll();
+      }
+
+      clearAll() {
+        this.currentInput = '0';
+        this.previousInput = null;
+        this.operator = null;
+        this.isResult = false;
+        this.updateDisplay();
+      }
+
+      // 부동소수점 계산 오차 해결 (예: 0.1 + 0.2 = 0.3)
+      sanitizePrecision(num) {
+        if (!isFinite(num)) return '오류';
+        return parseFloat(num.toPrecision(12));
+      }
+
+      formatNumber(val) {
+        if (val === '오류') return '오류';
+        const parts = val.toString().split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
+      }
+
+      appendNumber(digit) {
+        this.sound.playNumberSound(digit);
+
+        if (this.isResult) {
+          this.currentInput = digit;
+          this.isResult = false;
+        } else {
+          if (this.currentInput === '0') {
+            this.currentInput = digit;
+          } else {
+            if (this.currentInput.replace(/[^0-9]/g, '').length >= 14) return;
+            this.currentInput += digit;
+          }
+        }
+        this.updateDisplay();
+      }
+
+      appendDecimal() {
+        this.sound.playNumberSound('.');
+
+        if (this.isResult) {
+          this.currentInput = '0.';
+          this.isResult = false;
+          this.updateDisplay();
+          return;
+        }
+
+        if (!this.currentInput.includes('.')) {
+          this.currentInput += '.';
+          this.updateDisplay();
+        }
+      }
+
+      chooseOperator(op) {
+        this.sound.playOperatorSound();
+
+        if (this.currentInput === '오류') {
+          this.clearAll();
+          return;
+        }
+
+        if (this.operator !== null && !this.isResult) {
+          this.compute();
+        }
+
+        this.previousInput = this.currentInput;
+        this.operator = op;
+        this.isResult = true;
+        this.updateDisplay();
+      }
+
+      compute() {
+        if (this.operator === null || this.previousInput === null) return;
+
+        const prev = parseFloat(this.previousInput);
+        const curr = parseFloat(this.currentInput);
+        let result = 0;
+
+        switch (this.operator) {
+          case '+':
+            result = this.sanitizePrecision(prev + curr);
+            break;
+          case '-':
+            result = this.sanitizePrecision(prev - curr);
+            break;
+          case '×':
+            result = this.sanitizePrecision(prev * curr);
+            break;
+          case '÷':
+            if (curr === 0) {
+              result = '오류';
+            } else {
+              result = this.sanitizePrecision(prev / curr);
+            }
+            break;
+          default:
+            return;
+        }
+
+        this.historyElem.textContent = `${this.formatNumber(prev)} ${this.operator} ${this.formatNumber(curr)} =`;
+        this.currentInput = result.toString();
+        this.previousInput = null;
+        this.operator = null;
+        this.isResult = true;
+        this.updateDisplay(true);
+      }
+
+      applyPercent() {
+        this.sound.playOperatorSound();
+        if (this.currentInput === '오류') return;
+        const val = parseFloat(this.currentInput);
+        this.currentInput = this.sanitizePrecision(val / 100).toString();
+        this.updateDisplay();
+      }
+
+      deleteBack() {
+        this.sound.playClearSound();
+        if (this.isResult || this.currentInput === '오류') {
+          this.clearAll();
+          return;
+        }
+
+        if (this.currentInput.length > 1) {
+          this.currentInput = this.currentInput.slice(0, -1);
+        } else {
+          this.currentInput = '0';
+        }
+        this.updateDisplay();
+      }
+
+      updateDisplay(isEqualAction = false) {
+        this.currentElem.textContent = this.formatNumber(this.currentInput);
+
+        if (!isEqualAction) {
+          if (this.operator && this.previousInput !== null) {
+            this.historyElem.textContent = `${this.formatNumber(this.previousInput)} ${this.operator}`;
+          } else {
+            this.historyElem.textContent = '';
+          }
+        }
+      }
+    }
+
+    /* =========================================
+       3. 이벤트 바인딩 및 키보드 입력 지원
+       ========================================= */
+    document.addEventListener('DOMContentLoaded', () => {
+      const historyDisplay = document.getElementById('historyDisplay');
+      const currentDisplay = document.getElementById('currentDisplay');
+      const soundEngine = new SoundEngine();
+      const calc = new Calculator(historyDisplay, currentDisplay, soundEngine);
+
+      // 키패드 클릭 이벤트 처리
+      document.querySelector('.keypad-grid').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        const { number, operator, action } = btn.dataset;
+
+        if (number !== undefined) {
+          calc.appendNumber(number);
+        } else if (operator !== undefined) {
+          calc.chooseOperator(operator);
+        } else if (action !== undefined) {
+          switch (action) {
+            case 'clear':
+              soundEngine.playClearSound();
+              calc.clearAll();
+              break;
+            case 'backspace':
+              calc.deleteBack();
+              break;
+            case 'percent':
+              calc.applyPercent();
+              break;
+            case 'decimal':
+              calc.appendDecimal();
+              break;
+            case 'calculate':
+              soundEngine.playEqualSound();
+              calc.compute();
+              break;
+          }
+        }
+      });
+
+      // PC 키보드 지원
+      window.addEventListener('keydown', (e) => {
+        if (e.key >= '0' && e.key <= '9') {
+          calc.appendNumber(e.key);
+        } else if (e.key === '.') {
+          calc.appendDecimal();
+        } else if (e.key === '+') {
+          calc.chooseOperator('+');
+        } else if (e.key === '-') {
+          calc.chooseOperator('-');
+        } else if (e.key === '*') {
+          calc.chooseOperator('×');
+        } else if (e.key === '/') {
+          e.preventDefault();
+          calc.chooseOperator('÷');
+        } else if (e.key === 'Enter' || e.key === '=') {
+          e.preventDefault();
+          soundEngine.playEqualSound();
+          calc.compute();
+        } else if (e.key === 'Backspace') {
+          calc.deleteBack();
+        } else if (e.key === 'Escape') {
+          soundEngine.playClearSound();
+          calc.clearAll();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
